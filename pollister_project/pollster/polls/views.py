@@ -1,4 +1,8 @@
 from django.shortcuts import render
+from django.template import loader
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 
 # Create your views here.
 
@@ -17,9 +21,34 @@ def detail(request, question_id):
         question = Question.objects.get(pk=question_id)
     except Question.DoesNotExist:
         raise Http404("Question does not exist")
-    return render(request, 'polls/results.html', {'question': question})
+    return render(request, 'polls/detail.html', {'question': question})
 
 # Get question and display results
 def results(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     return render(request, 'polls/results.html', { 'question': question })
+
+# Vote for a question choice
+def vote(request, question_id):
+    #the vote method has the request which includes the choice selected when the vote was submitted and the id of the question that the choice corresponds to
+    #you can print the choice
+    print(request.POST['choice'])
+    #getting the question with the primary key which is question id and saving it to a question variable
+    question = get_object_or_404(Question, pk=question_id)
+    try:
+        #saving the selected choice to a variable
+        selected_choice = question.choice_set.get(pk=request.POST['choice'])
+    except (KeyError, Choice.DoesNotExist):
+        #if the choice does not exist, render the voting form with the error message that they didnt select a choice
+        # Redisplay the question voting form.
+        return render(request, 'polls/detail.html', {
+            'question': question,
+            'error_message': "You didnt select a choice.",
+        })
+    else:
+        #if all goes well increase vote by 1 and save
+        selected_choice.votes += 1
+        selected_choice.save()
+        # Always return an HttpResponseRedirect after successfully dealing with POST data. This prevents data from being posted twice if a user hits the back button.
+        return HttpResponseRedirect(reverse('polls:results', args=(question.id,)))
+        #redirect to the results view
